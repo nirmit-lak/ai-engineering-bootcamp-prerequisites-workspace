@@ -1,10 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class Connfig(BaseSettings):
-    OPENAI_API_KEY: str
-    GOOGLE_API_KEY: str
-    GROQ_API_KEY: str
+class Config(BaseSettings):
+
+    API_URL: str = "http://api:8000"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-config = Connfig()
+config = Config()

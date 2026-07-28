@@ -1,37 +1,39 @@
 import streamlit as st
-from openai import OpenAI
-from groq import Groq
-from google import genai
-from core.config import config
+import requests
+from chatbot_ui.core.config import config
 
-def run_llm(provider, model_name, messages, max_tokens=500) :
 
-    if provider == "OpenAI" :
-        client = OpenAI(api_key=config.OPENAI_API_KEY)
-    elif provider == "Groq" :
-        client = Groq(api_key=config.GROQ_API_KEY)
-    else :
-        client = genai.Client(api_key=config.GOOGLE_API_KEY)
+def api_call(method,url,**kwargs) :
 
-    if provider == "Google" :
-        return client.models.generate_content(
-            model=model_name,
-            contents=[message["content"] for message in messages],
-        ).text 
-    elif provider == "Groq" :
-        return client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            max_completion_tokens=max_tokens
-        ).choices[0].message.content
-    else :
-        return client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            max_completion_tokens=max_tokens,
-            reasoning_effort="minimal"
-        ).choices[0].message.content
+    def _show_error_popup(message) :
+        """Show error message as popup in the top-right corner."""
+        st.session_state["error_message"] = {
+            "visible": True,
+            "message": message
+        }
 
+    try :
+        response = getattr(requests, method)(url, **kwargs)
+
+        try :
+            response_data = response.json()
+        except requests.exceptions.JSONDecodeError :
+            response_data = {"message":"Invalid response formate from server"}
+
+        if response.ok :
+            return True, response_data
+
+        return False , response_data
+
+    except requests.exceptions.ConnectionError:
+        _show_error_popup("Connection error. Please check your network connection.")
+        return False, {"message": "Connection error"}
+    except requests.exceptions.Timeout:
+        _show_error_popup("The request timed out. Please try again later.")
+        return False, {"message": "Request timed out"}
+    except Exception as e:
+        _show_error_popup(f"An error occurred: {str(e)}")
+        return False, {"message": str(e)}
 
 ## Lets create a sidebar with a dropdown for the model list and providers
 with st.sidebar :
@@ -66,8 +68,8 @@ if prompt := st.chat_input("Hello! I am your AI assistant. How can I help you to
         st.markdown(prompt)
 
     with st.chat_message("assistant") :
-        output = run_llm(st.session_state["provider"], st.session_state["model_name"], st.session_state["messages"])
-        response_data = output
-        answer = response_data
+        output = api_call("post", f"{config.API_URL}/chat", json={"provider": st.session_state["provider"], "model_name": st.session_state["model_name"], "messages": st.session_state["messages"]})
+        response_data = output[1]
+        answer = response_data["message"]
         st.write(answer)
     st.session_state.messages.append({"role": "assistant", "content": answer})

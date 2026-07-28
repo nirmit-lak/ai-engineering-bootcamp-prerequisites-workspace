@@ -42,7 +42,7 @@ def run_llm(provider, model_name, messages, max_tokens=500) :
             model=model_name,
             messages=messages,
             max_completion_tokens=max_tokens,
-            reasoning_effort="minimal"
+            reasoning_effort="none"
         ).choices[0].message.content
 
 
