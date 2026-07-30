@@ -24,4 +24,5 @@ members = [
 [dependency-groups]
 dev = [
     "matplotlib>=3.11.1",
+    "qdrant-client>=1.18.0",
 ]
